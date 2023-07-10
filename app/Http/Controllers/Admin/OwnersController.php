@@ -25,7 +25,7 @@ class OwnersController extends Controller
      */
     public function index()
     {
-        $owners = Owner::select('name', 'email', 'created_at')->get();
+        $owners = Owner::select('id', 'name', 'email', 'created_at')->paginate(5);
 
         return view('admin.owners.index', compact('owners'));
     }
@@ -44,7 +44,7 @@ class OwnersController extends Controller
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
@@ -60,7 +60,7 @@ class OwnersController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        return redirect()->route('admin.owners.index')->with('message', 'オーナーを登録しました');
+        return redirect()->route('admin.owners.index')->with(['message' => 'オーナー情報を追加しました', 'status' => 'info']);
     }
 
     /**
@@ -78,11 +78,13 @@ class OwnersController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Contracts\View\View
      */
     public function edit($id)
     {
-        //
+        $owner = Owner::findOrFail($id);
+
+        return view('admin.owners.edit', compact('owner'));
     }
 
     /**
@@ -90,21 +92,52 @@ class OwnersController extends Controller
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, $id)
     {
-        //
+        $owner = Owner::findOrFail($id);
+        $owner->name = $request->name;
+        $owner->email = $request->email;
+        $owner->password = Hash::make($request->password);
+        $owner->save();
+
+        return redirect()->route('admin.owners.index')->with(['message' => 'オーナー情報を更新しました', 'status' => 'info']);
     }
 
     /**
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy($id)
     {
-        //
+        Owner::findOrFail($id)->delete();
+
+        return redirect()->route('admin.owners.index')->with(['message' => 'オーナー情報を削除しました', 'status' => 'alert']);
+    }
+
+    /**
+     * Display a listing of the expired owners.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function expiredOwnerIndex()
+    {
+        $expiredOwners = Owner::onlyTrashed()->get();
+        return view('admin.expired-owners', compact('expiredOwners'));
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function expiredOwnerDestroy($id)
+    {
+        Owner::onlyTrashed()->findOrFail($id)->forceDelete();
+        return redirect()->route('admin.expired-owners.index');
     }
 }
